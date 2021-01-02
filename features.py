@@ -1,10 +1,10 @@
 import json
 
-# updateExport() code copied entirely from DecisionMakerSLR.
+# updateExportWithFreeAgents() and other features should be kept in sync with code from DecisionMakerSLR.
 
 # Update an existing export named "export.json" with Free Agency decisions found in a decisionArr.
 # This should perfectly emulate actually signing them in the BBGM game.
-def updateExport(isResign, decisionArr, exportName):
+def updateExportWithFreeAgents(isResign, decisionArr, exportName):
 	print(decisionArr)
 
 	with open(exportName, "r", encoding='utf-8-sig') as file:
@@ -21,7 +21,7 @@ def updateExport(isResign, decisionArr, exportName):
 	phase = text.split(" ")[1]
 
 	for decision in decisionArr:
-		player = list(filter(lambda player: (player['firstName'].strip() + " " + player['lastName'].strip()) == decision[0], export['players']))[-1]
+		player = list(filter(lambda player: ((player['firstName'].strip() + " " + player['lastName'].strip()) == decision[0]) and (player['tid'] == -1), export['players']))[-1]
 		tid = teamDict[decision[1]]
 		player['tid'] = tid
 		player['contract']['amount'] = float(decision[2]) * 1000
@@ -192,7 +192,10 @@ def pickupOptions(optionsArr, exportName):
 	phase = text.split(" ")[1]
 
 	for option in optionsArr:
-		player = list(filter(lambda player: (player['firstName'].strip() + " " + player['lastName'].strip()) == option[0], export['players']))[-1]
+		try:
+			player = list(filter(lambda player: (player['firstName'].strip() + " " + player['lastName'].strip()) == option[0], export['players']))[-1]
+		except IndexError:
+			raise("Could not find player in export: ",option[0])
 		tid = teamDict[option[1]]
 		player['tid'] = tid
 		optionAmount = player['salaries'][-1]['amount']
@@ -238,6 +241,18 @@ def pickupOptions(optionsArr, exportName):
 		json.dump(export, file)
 		print("New Export Created.")
 
+def cleanupFreeAgents(exportName):
+	with open(exportName, "r", encoding="utf-8-sig") as file:
+		export = json.load(file)
+	#check export meta phasetext ends with "free agency"
+	year_phase_dict = getYearAndPhase(export)
+	#iterate through players backwards
+	fa_list = list(filter(lambda player: (player['tid'] == -1) & (player['lastName'].strip()[-1] == ")"), export['players']))
+	for player in fa_list:
+		player['lastName'] = player['lastName'].replace("(QO)","").replace("(PO)","").replace("(TO)","").strip()
+		print("Updated:",player['firstName'],player['lastName'])
+	updateExport(export,exportName)
+
 def updateFinances(financesArr, exportName):
 	print(financesArr)
 	with open(exportName, "r", encoding="utf-8-sig") as file:
@@ -271,11 +286,21 @@ def updateFinances(financesArr, exportName):
 		del team['budget']['health']['rank']
 		del team['budget']['facilities']['rank']
 
-	newFile = exportName.replace(".json", "") + "_updated.json"
+		updateExport(export,exportName),
+		print("Remember to press 'Save Revenue and Expenses Settings' once on any team to get rank to display correctly!")
 
+def getYearAndPhase(export):
+	text = export['meta']['phaseText']
+	return {"year": int(text.split(" ")[0]), "phase": text.split(" ")[1]}
+
+def updateExport(export,exportName):
+	newFile = exportName.replace(".json", "") + "_updated.json"
 	with open(newFile, "w") as file:
 		json.dump(export, file)
 		print("New Export Created.")
-		print("Remember to press 'Save Revenue and Expenses Settings' once on any team to get rank to display correctly!")
 
- 
+def getSinglePlayer(export,playerName):
+	try:
+		return list(filter(lambda player: (player['firstName'].strip() + " " + player['lastName'].strip()) == playerName, export['players']))[-1]
+	except IndexError:
+		raise("Could not find player in export: ",playerName)

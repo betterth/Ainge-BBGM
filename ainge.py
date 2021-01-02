@@ -11,16 +11,18 @@ def fileExists(fileName):
 	return 1
 
 print("Welcome to the Ainge-BBGM CLI tool, made to make your BBGM multiplayer commissioner life just a bit easier.\n")
-fileName = input("For starters, please tell us your export's name (include .json): ")
 
+#Handle export: Try export.json as default, else ask for input
+fileName = "export.json"
 while True:
 	if (fileExists(fileName)):
 		with open(fileName.strip(), "r", encoding='utf-8-sig') as file:
+			print("Loading export",fileName)
 			export = json.load(file)
 		break
 	else:
-		print("No such file exists!")
-		fileName = input("Please re-input your export's name (include .json): ")
+		print(fileName,"does not exist.")
+		fileName = input("Please enter your export's name (include .json): ")
 
 print("\n")
 
@@ -32,33 +34,37 @@ while True:
 	print("P: Type P to Print Current Standings")
 	print("O: Type O to Pick Up Options")
 	print("F: Type F to Update Finances")
+	print("C: Type C to Cleanup Free Agents")
 	print("H. Type H for Help")
 	choice = input().strip().upper()
 
 	if (choice == "U"):
-		csvName = input("Please tell us the Decision CSV's name (include .csv): ")
-
+		#Try decisionMatrx.csv as default, else request input
+		csvName = "decisionMatrix.csv"
 		while True:
 			if (fileExists(csvName)):
-				print("Intializing export... \n")
+				print("Initializing export... \n")
 				with open(csvName.strip(), "r", encoding="utf-8-sig") as file:
 					reader = csv.reader(file)
+					#skip column headers row
 					next(reader)
 					decisionArr = []
 					i = 0
 
 					for row in reader:
-						decisionArr.append(row)
-						i += 1
+						#ignore blank lines from csv						
+						if not row == []:
+							decisionArr.append(row)
+							i += 1
 				break
 			else:
 				print("No such file exists!")
-				csvName = input("Please re-input the CSV's name (include .csv): ")
+				csvName = input("Please input the CSV's name (include .csv): ")
 
 		isResign = input("Is this concerning Re-signings? If yes, type 1. If not, type 0: ")
 
 		print("Beginning export update... \n")
-		features.updateExport(isResign, decisionArr, fileName)
+		features.updateExportWithFreeAgents(isResign, decisionArr, fileName)
 		break
 
 	elif (choice == "T"):
@@ -83,11 +89,11 @@ while True:
 		break
 
 	elif (choice == "O"):
-		csvName = input("Please tell us the Option CSV's name (include .csv): ")
-
+		#Try options.csv as default, else ask for input
+		csvName = "options.csv"
 		while True:
 			if (fileExists(csvName)):
-				print("Intializing export... \n")
+				print("Initializing export... \n")
 				with open(csvName.strip(), "r", encoding="utf-8-sig") as file:
 					reader = csv.reader(file)
 					next(reader)
@@ -97,7 +103,7 @@ while True:
 						optionsArr.append(row)
 				break
 			else:
-				print("No such file exists!")
+				print(csvName," does not exist")
 				csvName = input("Please re-input the CSV's name (include .csv): ")
 
 		print("Beginning export update... \n")
@@ -109,7 +115,7 @@ while True:
 
 		while True:
 			if (fileExists(csvName)):
-				print("Intializing export... \n")
+				print("Initializing export... \n")
 				with open(csvName.strip(), "r", encoding="utf-8-sig") as file:
 					reader = csv.reader(file)
 					next(reader)
@@ -126,6 +132,12 @@ while True:
 		features.updateFinances(financesArr, fileName)
 		break
 
+	elif (choice == "C"):
+		print("Initializing export... \n")
+		print("Beginning export update... \n")
+		features.cleanupFreeAgents(fileName)
+		break
+				
 	elif (choice == "H"):
 		print("You can use Ainge-BBGM to update your export or eliminate a transaction at the current moment.\n")
 		print("Update Export: by typing U, you can choose to update your export with FA signings that were made.")
